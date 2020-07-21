@@ -1,0 +1,16 @@
+main: tyze.bukkit.summerboss.App
+name: SummerBoss
+version: 1.0
+
+commands:
+    summerboss:
+        description: create
+        usage: /sboss create
+        permission: summerboss.create
+        aliases: [sbs, sboss]
+
+permissions:
+    summerboss.create:
+        default: op
+    summerboss.reset:
+        default: op
