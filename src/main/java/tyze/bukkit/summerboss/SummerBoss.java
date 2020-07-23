@@ -70,39 +70,35 @@ public class SummerBoss implements Listener, CommandExecutor {
                 }, 0L, 20L);
     }
 
-    @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        event.getPlayer().setScoreboard(scoreboard);
-    }
-
     private void initializeScoreBoard() {
         scoreboard = manager.getNewScoreboard();
         objective = scoreboard.registerNewObjective("積分", "dummy");
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            online.setScoreboard(scoreboard);
-        }
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
-            if (args.length >= 1 && args[0].equals("create")) {
+            if (args.length >= 1 && args[0].equals("create") && player.hasPermission("summerboss.create")) {
                 spawnBoss(player.getLocation());
                 return true;
             }
-            if (args.length >= 1 && args[0].equals("save")) {
+            if (args.length >= 1 && args[0].equals("save") && player.hasPermission("summerboss.create")) {
                 saveFile();
                 return true;
             }
-            if (args.length >= 1 && args[0].equals("test")) {
+            if (args.length >= 1 && args[0].equals("test") && player.hasPermission("summerboss.create")) {
                 Bukkit.getLogger().info(" " + entityBoss.getLocation());
             }
-            if (args.length >= 1 && args[0].equals("reset")) {
+            if (args.length >= 1 && args[0].equals("reset") && player.hasPermission("summerboss.reset")) {
                 initializeScoreBoard();
             }
+            if (args.length >= 1 && args[0].equals("off") && player.hasPermission("summerboss.off")) {
+                player.setScoreboard(manager.getNewScoreboard());
+            }
 
+            return true;
         }
         return false;
     }
@@ -129,6 +125,8 @@ public class SummerBoss implements Listener, CommandExecutor {
             if (player != null && damage != 0) {
                 Score score = objective.getScore(player);
                 score.setScore(score.getScore() + damage);
+
+                player.setScoreboard(scoreboard);
             }
             event.setDamage(0);
         }
@@ -174,6 +172,8 @@ public class SummerBoss implements Listener, CommandExecutor {
 
     private void saveFile() {
         File file = new File(configFilePath);
+        if (config == null)
+            config = YamlConfiguration.loadConfiguration(file);
 
         if (entityBoss != null) {
             Location loc = entityBoss.getLocation();
@@ -201,8 +201,12 @@ public class SummerBoss implements Listener, CommandExecutor {
 
         config = YamlConfiguration.loadConfiguration(file);
 
-        lastLocation = new Location(Bukkit.getWorld(config.getString("boss-w")), config.getDouble("boss-x"),
-                config.getDouble("boss-y"), config.getDouble("boss-z"));
+        String w = config.getString("boss-w");
+        Double x = config.getDouble("boss-x");
+        Double y = config.getDouble("boss-y");
+        Double z = config.getDouble("boss-z");
+        if (w != null && x != null && y != null && z != null)
+            lastLocation = new Location(Bukkit.getWorld(w), x, y, z);
 
         ConfigurationSection scores = config.getConfigurationSection("scores");
         for (String entry : scores.getKeys(false)) {

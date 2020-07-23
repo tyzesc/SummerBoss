@@ -6,7 +6,6 @@ commands:
     summerboss:
         description: create
         usage: /sboss create
-        permission: summerboss.create
         aliases: [sbs, sboss]
 
 permissions:
@@ -14,3 +13,5 @@ permissions:
         default: op
     summerboss.reset:
         default: op
+    summerboss.off:
+        default: true
