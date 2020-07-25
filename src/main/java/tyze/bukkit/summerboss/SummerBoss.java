@@ -5,7 +5,6 @@ import java.io.IOException;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -36,6 +35,7 @@ import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.ScoreboardManager;
 
 import io.lumine.xikage.mythicmobs.api.bukkit.BukkitAPIHelper;
+import io.lumine.xikage.mythicmobs.mobs.ActiveMob;
 
 public class SummerBoss implements Listener, CommandExecutor {
     private ScoreboardManager manager = Bukkit.getScoreboardManager();
@@ -43,8 +43,8 @@ public class SummerBoss implements Listener, CommandExecutor {
     private Objective objective;
     private Entity entityBoss;
     private YamlConfiguration config;
-
-    private Location lastLocation = null;
+    private BukkitAPIHelper mmApi = new BukkitAPIHelper();
+    private String bossName = "大象大象生出小象";
 
     private static String configFilePath = "plugins/SummerBoss/saves.yml";
 
@@ -54,20 +54,6 @@ public class SummerBoss implements Listener, CommandExecutor {
 
         initializeScoreBoard();
         loadFile();
-
-        Bukkit.getServer().getScheduler().scheduleSyncRepeatingTask(Bukkit.getPluginManager().getPlugin("SummerBoss"),
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        if (entityBoss == null) {
-                            if (lastLocation != null) {
-                                spawnBoss(lastLocation);
-                            }
-                        } else {
-                            lastLocation = null;
-                        }
-                    }
-                }, 0L, 20L);
     }
 
     private void initializeScoreBoard() {
@@ -105,7 +91,7 @@ public class SummerBoss implements Listener, CommandExecutor {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-        if (event.getEntity().equals(entityBoss)) {
+        if (isBoss(event.getEntity())) {
             Entity damager = event.getDamager();
 
             Player player = null;
@@ -132,28 +118,9 @@ public class SummerBoss implements Listener, CommandExecutor {
         }
     }
 
-    @EventHandler
-    public void onEntityDamage(EntityDamageEvent event) {
-        if (event.getEntity().equals(entityBoss)) {
-            if (!event.getCause().equals(DamageCause.ENTITY_ATTACK) && !event.getCause().equals(DamageCause.PROJECTILE))
-                event.setDamage(0);
-        }
-    }
-
-    @EventHandler
-    public void onEntityDeath(EntityDeathEvent event) {
-        if (event.getEntity().equals(entityBoss)) {
-            Bukkit.getLogger().warning("BOSS死去QQ");
-            event.setDroppedExp(0);
-            event.getDrops().clear();
-            spawnBoss(event.getEntity().getLocation());
-        }
-    }
-
     private void spawnBoss(Location location) {
-        BukkitAPIHelper api = new BukkitAPIHelper();
         try {
-            entityBoss = api.spawnMythicMob("大象大象生出小象", location);
+            entityBoss = mmApi.spawnMythicMob(bossName, location);
             ((Skeleton) entityBoss).setHealth(2);
         } catch (Exception e) {
         }
@@ -162,26 +129,22 @@ public class SummerBoss implements Listener, CommandExecutor {
     private boolean isBoss(Entity entity) {
         if (entity == null)
             return false;
-        return entity.getUniqueId().equals(entity.getUniqueId());
+
+        ActiveMob mob = mmApi.getMythicMobInstance(entity);
+        if (mob == null)
+            return false;
+
+        return mob.getType().equals(mmApi.getMythicMob(bossName));
     }
 
     public void disable() {
         saveFile();
-        entityBoss = null;
     }
 
     private void saveFile() {
         File file = new File(configFilePath);
         if (config == null)
             config = YamlConfiguration.loadConfiguration(file);
-
-        if (entityBoss != null) {
-            Location loc = entityBoss.getLocation();
-            config.set("boss-w", loc.getWorld().getName());
-            config.set("boss-x", loc.getX());
-            config.set("boss-y", loc.getY());
-            config.set("boss-z", loc.getZ());
-        }
 
         ConfigurationSection scores = config.createSection("scores");
         for (String entry : scoreboard.getEntries()) {
@@ -200,13 +163,6 @@ public class SummerBoss implements Listener, CommandExecutor {
             return;
 
         config = YamlConfiguration.loadConfiguration(file);
-
-        String w = config.getString("boss-w");
-        Double x = config.getDouble("boss-x");
-        Double y = config.getDouble("boss-y");
-        Double z = config.getDouble("boss-z");
-        if (w != null && x != null && y != null && z != null)
-            lastLocation = new Location(Bukkit.getWorld(w), x, y, z);
 
         ConfigurationSection scores = config.getConfigurationSection("scores");
         for (String entry : scores.getKeys(false)) {

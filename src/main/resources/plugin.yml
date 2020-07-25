@@ -1,6 +1,6 @@
 main: tyze.bukkit.summerboss.App
 name: SummerBoss
-version: 1.0
+version: 1.1
 
 commands:
     summerboss:
